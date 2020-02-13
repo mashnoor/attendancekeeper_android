@@ -1,67 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:camerakit="http://schemas.android.com/apk/res-auto"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
 
-    android:orientation="vertical"
-    android:weightSum="5">
+    android:orientation="vertical">
 
     <com.davidmiguel.multistateswitch.MultiStateSwitch
         android:id="@+id/multiSwitch"
         android:layout_width="match_parent"
+        android:layout_alignParentTop="true"
 
-        android:layout_height="5dp"
-        android:layout_weight="1" />
+        android:layout_height="55dp" />
 
-    <com.camerakit.CameraKitView
+    <com.priyankvasa.android.cameraviewex.CameraView
         android:id="@+id/camera"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_gravity="center"
-        android:layout_weight="3"
-        camerakit:camera_aspectRatio="2.5"
+        android:layout_below="@id/multiSwitch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+
         android:adjustViewBounds="true"
-        camerakit:camera_imageJpegQuality="90" />
+        android:keepScreenOn="true"
+        app:autoFocus="continuous_picture"
+        app:awb="auto"
+        app:aspectRatio="1:1"
+        app:cameraMode="single_capture"
+        app:facing="front"
+        app:continuousFrameSize="320,H240"
+        app:flash="auto"
+        app:jpegQuality="medium"
+        app:noiseReduction="high_quality"
+        app:opticalStabilization="true"
+        app:outputFormat="jpeg"
+        app:pinchToZoom="false"
+        app:shutter="short_time"
+        app:singleCaptureSize="320,H240"
+        app:touchToFocus="true"
+        app:zsl="true" />
 
     <ImageView
         android:id="@+id/ivCapturedImage"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
+
         android:layout_gravity="center"
-        android:layout_weight="3"
+        android:layout_below="@id/multiSwitch"
         android:visibility="gone" />
 
     <com.beardedhen.androidbootstrap.BootstrapButton
         android:id="@+id/btnFetchID"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_below="@id/camera"
         android:layout_marginBottom="10dp"
         android:layout_marginTop="10dp"
         android:onClick="fetchID"
         android:text="Fetch ID"
-        camerakit:bootstrapBrand="primary"
-        camerakit:bootstrapSize="lg"
-        camerakit:buttonMode="regular"
-        camerakit:roundedCorners="true"
-        camerakit:showOutline="false" />
+        android:gravity="center"
+
+        app:bootstrapBrand="primary"
+        app:bootstrapSize="lg"
+        app:buttonMode="regular"
+        app:roundedCorners="true"
+        app:showOutline="false" />
 
     <TextView
         android:id="@+id/tvMessgae"
+        android:layout_below="@id/btnFetchID"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:gravity="center"
         android:text="Place your face and click Fetch ID to proceed"
-        android:textSize="18dp" />
+        android:textSize="18sp" />
 
     <LinearLayout
         android:id="@+id/layout_confirm_reset"
+        android:layout_below="@id/tvMessgae"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_weight="1"
+
         android:gravity="center"
         android:visibility="invisible"
         android:orientation="horizontal">
@@ -72,23 +92,23 @@
             android:layout_marginEnd="10dp"
             android:onClick="confirm"
             android:text="Confirm"
-            camerakit:bootstrapBrand="success"
-            camerakit:bootstrapSize="lg"
-            camerakit:buttonMode="regular"
-            camerakit:roundedCorners="true"
-            camerakit:showOutline="false" />
+            app:bootstrapBrand="success"
+            app:bootstrapSize="lg"
+            app:buttonMode="regular"
+            app:roundedCorners="true"
+            app:showOutline="false" />
 
         <com.beardedhen.androidbootstrap.BootstrapButton
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:onClick="reset"
             android:text="Reset"
-            camerakit:bootstrapBrand="danger"
-            camerakit:bootstrapSize="lg"
-            camerakit:buttonMode="regular"
-            camerakit:roundedCorners="true"
-            camerakit:showOutline="false" />
+            app:bootstrapBrand="danger"
+            app:bootstrapSize="lg"
+            app:buttonMode="regular"
+            app:roundedCorners="true"
+            app:showOutline="false" />
     </LinearLayout>
 
 
-</LinearLayout>
+</RelativeLayout>

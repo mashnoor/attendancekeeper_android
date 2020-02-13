@@ -7,8 +7,8 @@ import android.util.Base64;
 import java.io.ByteArrayOutputStream;
 
 public class Constants {
-    public static final String FETCH_ID_URL = "https://attendancekeeper.net:5002/face_rec";
-    public static final String ATTENDANCE_URL = "https://attendancekeeper.net/attendance/add";
+    public static final String FETCH_ID_URL = "https://attendancekeeper.net:5002/face_rec/goldenfrog";
+    public static final String ATTENDANCE_URL = "https://attendancekeeper.net/goldenfrog/attendance/add";
     public static final String DEFAULT_MESSAGE = "Place your face and click Fetch ID to proceed";
 
 
