@@ -18,6 +18,7 @@ import com.beardedhen.androidbootstrap.BootstrapButton;
 import com.davidmiguel.multistateswitch.MultiStateSwitch;
 import com.davidmiguel.multistateswitch.State;
 import com.davidmiguel.multistateswitch.StateListener;
+import com.google.gson.Gson;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.PermissionToken;
 import com.karumi.dexter.listener.PermissionDeniedResponse;
@@ -27,9 +28,11 @@ import com.karumi.dexter.listener.single.PermissionListener;
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
-import com.priyankvasa.android.cameraviewex.CameraView;
-import com.priyankvasa.android.cameraviewex.Image;
-import com.priyankvasa.android.cameraviewex.Modes;
+import com.otaliastudios.cameraview.CameraListener;
+import com.otaliastudios.cameraview.CameraView;
+import com.otaliastudios.cameraview.PictureResult;
+import com.otaliastudios.cameraview.controls.Facing;
+
 
 import java.util.Arrays;
 
@@ -42,13 +45,9 @@ public class MainActivity extends AppCompatActivity {
     private CameraView cameraKitView;
 
     AsyncHttpClient client;
-    SweetAlertDialog loadingDialog;
+    SweetAlertDialog errorDialog;
     MultiStateSwitch multiSwitch;
     int currentState = 0;
-    LinearLayout layout_confirm_reset;
-    BootstrapButton btnFetchID;
-    TextView tvMessage;
-    ImageView ivCapturedImage;
     String userID;
 
     @Override
@@ -58,10 +57,6 @@ public class MainActivity extends AppCompatActivity {
 
         cameraKitView = findViewById(R.id.camera);
         multiSwitch = findViewById(R.id.multiSwitch);
-        layout_confirm_reset = findViewById(R.id.layout_confirm_reset);
-        btnFetchID = findViewById(R.id.btnFetchID);
-        tvMessage = findViewById(R.id.tvMessgae);
-        ivCapturedImage = findViewById(R.id.ivCapturedImage);
 
 
         multiSwitch.addStatesFromStrings(Arrays.asList("Time In", "Break In/Out", "Time Out"));
@@ -72,24 +67,30 @@ public class MainActivity extends AppCompatActivity {
                 currentState = stateIndex;
             }
         });
-        cameraKitView.setFacing(Modes.Facing.FACING_FRONT);
 
-        //cameraKitView.setFacing(CameraKit.FACING_FRONT);
-        //cameraKitView.toggleFacing();
-        loadingDialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE)
-                .setTitleText("Working")
-                .setContentText("Connecting to server. Please wait...");
+
+//        loadingDialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE)
+//                .setTitleText("Working")
+//                .setContentText("Connecting to server. Please wait...");
+
+        errorDialog = new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE)
+                .setTitleText("Oops...")
+                .setContentText("Something went wrong!");
+
 
         client = new AsyncHttpClient();
-//        cameraKitView.setPermissions(CameraKitView.PERMISSION_STORAGE);
-//        cameraKitView.setPermissions(CameraKitView.PERMISSION_CAMERA);
+
+        CameraView camera = findViewById(R.id.camera);
+        camera.setLifecycleOwner(this);
+
+
         Dexter.withActivity(this)
                 .withPermission(Manifest.permission.CAMERA)
                 .withListener(new PermissionListener() {
                     @Override
                     public void onPermissionGranted(PermissionGrantedResponse response) {
                         Toast.makeText(MainActivity.this, "Permission granted", Toast.LENGTH_LONG).show();
-                        cameraKitView.start();
+
                     }
 
                     @Override
@@ -104,33 +105,82 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .check();
 
-        cameraKitView.addPictureTakenListener((Image image) -> {
-            Toast.makeText(MainActivity.this, "Fetching id", Toast.LENGTH_LONG).show();
-            get_id(image.getData());
+
+        camera.setFacing(Facing.FRONT);
+
+        camera.addCameraListener(new CameraListener() {
 
 
-            return Unit.INSTANCE;
+            @Override
+            public void onPictureTaken(@NonNull PictureResult result) {
+                super.onPictureTaken(result);
+                get_id(result.getData());
+            }
+        });
 
+        camera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                camera.takePictureSnapshot();
+            }
         });
 
 
     }
 
+    private void makeAttendance(String type) {
+        SweetAlertDialog loadingDialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE)
+                .setTitleText("Working")
+                .setContentText("Connecting to server. Please wait...");
+        RequestParams params = new RequestParams();
+        params.put("idno", userID);
+        params.put("type", type);
+        client.post(Constants.ATTENDANCE_URL, params, new AsyncHttpResponseHandler() {
+            @Override
+            public void onStart() {
+                super.onStart();
+                loadingDialog.show();
+                userID = "";
+            }
 
-    public void confirm(View v) {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
+                loadingDialog.dismissWithAnimation();
 
-    }
+                String response = new String(responseBody);
+                Gson gson = new Gson();
+                AttendanceResponse attendanceResponse = gson.fromJson(response, AttendanceResponse.class);
 
-    public void reset(View v) {
-        layout_confirm_reset.setVisibility(View.INVISIBLE);
-        btnFetchID.setVisibility(View.VISIBLE);
-        tvMessage.setText(Constants.DEFAULT_MESSAGE);
-        ivCapturedImage.setVisibility(View.GONE);
-        cameraKitView.setVisibility(View.VISIBLE);
+                if (attendanceResponse.getError() == null || attendanceResponse.getError().isEmpty()) {
+                    new SweetAlertDialog(MainActivity.this, SweetAlertDialog.SUCCESS_TYPE)
+                            .setTitleText("Yaay!.")
+                            .setContentText(attendanceResponse.getSuccess())
+                            .show();
+
+                } else {
+                    new SweetAlertDialog(MainActivity.this, SweetAlertDialog.ERROR_TYPE)
+                            .setTitleText("Opps...")
+                            .setContentText(attendanceResponse.getError())
+                            .show();
+                }
+
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
+                loadingDialog.dismissWithAnimation();
+                errorDialog.show();
+
+
+            }
+        });
 
     }
 
     private void get_id(byte[] capturedImage) {
+        SweetAlertDialog loadingDialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE)
+                .setTitleText("Working")
+                .setContentText("Connecting to server. Please wait...");
         String imageBase64 = Base64.encodeToString(capturedImage, Base64.DEFAULT);
         RequestParams params = new RequestParams();
         params.add("image_data", imageBase64);
@@ -138,65 +188,66 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onStart() {
                 super.onStart();
+
                 loadingDialog.show();
 
             }
 
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-                Toast.makeText(MainActivity.this, new String(responseBody), Toast.LENGTH_LONG).show();
-                loadingDialog.dismiss();
+                //Toast.makeText(MainActivity.this, new String(responseBody), Toast.LENGTH_LONG).show();
+                loadingDialog.dismissWithAnimation();
                 userID = new String(responseBody);
-                if(userID.contains("face"))
-                {
+                if (userID.contains("face")) {
                     new SweetAlertDialog(MainActivity.this, SweetAlertDialog.ERROR_TYPE)
                             .setTitleText("Oops...")
                             .setContentText(userID)
+
                             .show();
-                }
-                else
-                {
+                } else {
                     String stateMsg, showMsg;
-                    if(currentState == 0)
-                    {
+                    if (currentState == 0) {
                         stateMsg = "timein";
                         showMsg = "Time In";
-                    }
-                    else if(currentState == 1)
-                    {
+                    } else if (currentState == 1) {
                         stateMsg = "break";
                         showMsg = "Break In/Out ";
-                    }
-                    else
-                    {
+                    } else {
                         stateMsg = "timeout";
                         showMsg = "Time Out";
 
                     }
 
                     new SweetAlertDialog(MainActivity.this, SweetAlertDialog.SUCCESS_TYPE)
-                            .setTitleText(stateMsg + " confirmation")
-                            .setContentText("Your ID is " + userID  + " and you want to " + showMsg)
+                            .setTitleText(showMsg + " Confirmation")
+                            .setContentText("Your ID is " + userID + " and you want to " + showMsg)
                             .setConfirmText("Yes, do it!")
+                            .setCancelButton("Nope!", new SweetAlertDialog.OnSweetClickListener() {
+                                @Override
+                                public void onClick(SweetAlertDialog sweetAlertDialog) {
+                                    sweetAlertDialog.dismissWithAnimation();
+                                }
+                            })
                             .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
                                 @Override
                                 public void onClick(SweetAlertDialog sDialog) {
-
                                     sDialog.dismissWithAnimation();
+                                    sDialog.cancel();
+
+
+                                    makeAttendance(stateMsg);
                                 }
                             })
                             .show();
 
 
                 }
-                //tvMessage.setText("Success! Your ID is: " + userID);
-                //btnFetchID.setVisibility(View.INVISIBLE);
-                layout_confirm_reset.setVisibility(View.VISIBLE);
+
             }
 
             @Override
             public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-                loadingDialog.dismiss();
+                loadingDialog.dismissWithAnimation();
                 new SweetAlertDialog(MainActivity.this, SweetAlertDialog.ERROR_TYPE)
                         .setTitleText("Oops...")
                         .setContentText("Something went wrong!")
@@ -208,95 +259,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public void fetchID(View v) {
-
-
-        cameraKitView.capture();
-
-
-        /***
-         cameraKitView.captureImage(new CameraKitView.ImageCallback() {
-        @Override public void onImage(CameraKitView cameraKitView, byte[] capturedImage) {
-        //File savedPhoto = new File(Environment.getExternalStorageDirectory(), "photo.jpg");
-        try {
-        cameraKitView.setVisibility(View.GONE);
-        ivCapturedImage.setVisibility(View.VISIBLE);
-        String imageBase64 = Base64.encodeToString(capturedImage, Base64.DEFAULT);
-        String compressed_base64 = Constants.resizeBase64Image(imageBase64);
-        Bitmap decodedByte = BitmapFactory.decodeByteArray(capturedImage, 0,capturedImage.length);
-        ivCapturedImage.setImageBitmap(decodedByte);
-        //Toast.makeText(MainActivity.this, savedPhoto.getPath(), Toast.LENGTH_LONG).show();
-        //                    FileOutputStream outputStream = new FileOutputStream(savedPhoto.getPath());
-        //                    outputStream.write(capturedImage);
-        //                    outputStream.close();
-        //
-        //
-        //                    Bitmap bm = BitmapFactory.decodeFile(savedPhoto.getPath());
-        //                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        //                    bm.compress(Bitmap.CompressFormat.JPEG, 90, baos); //bm is the bitmap object
-        //                    byte[] byteArray = baos.toByteArray();
-
-        //String imgageBase64 = Base64.encodeToString(capturedImage, Base64.DEFAULT);
-        String image = "data:image/jpeg;base64," + imageBase64;
-
-
-        RequestParams params = new RequestParams();
-        params.add("image_data",image);
-        client.post(Constants.FETCH_ID_URL, params, new AsyncHttpResponseHandler() {
-        @Override public void onStart() {
-        super.onStart();
-        dialog.show();
-
-        }
-
-        @Override public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-        Toast.makeText(MainActivity.this, new String(responseBody), Toast.LENGTH_LONG).show();
-        dialog.dismiss();
-        userID = new String(responseBody);
-        tvMessage.setText("Success! Your ID is: " + userID);
-        btnFetchID.setVisibility(View.INVISIBLE);
-        layout_confirm_reset.setVisibility(View.VISIBLE);
-        }
-
-        @Override public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-        dialog.dismiss();
-        Toast.makeText(MainActivity.this, "Something went wrong", Toast.LENGTH_LONG).show();
-
-        }
-        });
-
-
-
-        } catch (Exception e) {
-        e.printStackTrace();
-        }
-
-        }
-        });
-         ***/
+    public void takePhoto(View v) {
+        cameraKitView.takePictureSnapshot();
     }
-
-
 
 
     @Override
     protected void onPause() {
-        cameraKitView.stop();
+
         super.onPause();
     }
 
     @Override
     protected void onStop() {
-        cameraKitView.stop();
+
         super.onStop();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
-        {
-            cameraKitView.start();
-        }
+
     }
 }

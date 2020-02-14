@@ -41,8 +41,10 @@ dependencies {
 
     implementation 'com.github.davidmigloz:multi-state-switch:1.4.0'
     implementation  'com.beardedhen:androidbootstrap:2.3.2'
-    implementation "com.priyankvasa.android:cameraview-ex:3.5.5-alpha"
     implementation 'com.karumi:dexter:6.0.2'
     implementation 'com.github.f0ris.sweetalert:library:1.5.1'
+    api 'com.otaliastudios:cameraview:2.6.1'
+    implementation 'com.google.code.gson:gson:2.8.6'
+
 
 }
