@@ -1,6 +1,7 @@
 package net.attendancekeeper.android;
 
 import android.Manifest;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Base64;
 import android.view.View;
@@ -11,6 +12,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.beardedhen.androidbootstrap.BootstrapButton;
 import com.davidmiguel.multistateswitch.MultiStateSwitch;
@@ -87,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onPermissionGranted(PermissionGrantedResponse response) {
                         Toast.makeText(MainActivity.this, "Permission granted", Toast.LENGTH_LONG).show();
+                        cameraKitView.start();
                     }
 
                     @Override
@@ -100,6 +103,15 @@ public class MainActivity extends AppCompatActivity {
                     }
                 })
                 .check();
+
+        cameraKitView.addPictureTakenListener((Image image) -> {
+            Toast.makeText(MainActivity.this, "Fetching id", Toast.LENGTH_LONG).show();
+            get_id(image.getData());
+
+
+            return Unit.INSTANCE;
+
+        });
 
 
     }
@@ -197,17 +209,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void fetchID(View v) {
-        cameraKitView.addPictureTakenListener((Image image) -> {
-//            cameraKitView.setVisibility(View.GONE);
-//            ivCapturedImage.setVisibility(View.VISIBLE);
-//            Bitmap decodedByte = BitmapFactory.decodeByteArray(image.getData(), 0, image.getData().length);
-//            ivCapturedImage.setImageBitmap(decodedByte);
-            get_id(image.getData());
 
-
-            return Unit.INSTANCE;
-
-        });
 
         cameraKitView.capture();
 
@@ -275,17 +277,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    @Override
-    protected void onStart() {
-        super.onStart();
 
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        cameraKitView.start();
-    }
 
     @Override
     protected void onPause() {
@@ -299,5 +291,12 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
     }
 
-
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+        {
+            cameraKitView.start();
+        }
+    }
 }
