@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">AttendanceKeeper</string>
+    <string name="app_name">Attendance Keeper</string>
+
+    <string name="title_activity_splash">Attendance Keeper</string>
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
 </resources>

@@ -9,18 +9,20 @@
         android:id="@+id/multiSwitch"
         android:layout_width="match_parent"
         android:layout_height="55dp"
+        app:multistateswitch_selected_background_color="#00ADb5"
 
         android:layout_alignParentTop="true"
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.otaliastudios.cameraview.CameraView
         android:id="@+id/camera"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:keepScreenOn="true"
         app:cameraSnapshotMaxHeight="640"
         app:cameraSnapshotMaxWidth="480"
-        app:facing="front"
+        app:cameraWhiteBalance="auto"
+        app:cameraHdr="on"
 
         app:layout_constraintBottom_toTopOf="@+id/btnFetchID"
         app:layout_constraintEnd_toEndOf="parent"

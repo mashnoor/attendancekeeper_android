@@ -1,20 +1,15 @@
 package net.attendancekeeper.android;
 
 import android.Manifest;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Base64;
 import android.view.View;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
-import com.beardedhen.androidbootstrap.BootstrapButton;
 import com.davidmiguel.multistateswitch.MultiStateSwitch;
 import com.davidmiguel.multistateswitch.State;
 import com.davidmiguel.multistateswitch.StateListener;
@@ -32,17 +27,16 @@ import com.otaliastudios.cameraview.CameraListener;
 import com.otaliastudios.cameraview.CameraView;
 import com.otaliastudios.cameraview.PictureResult;
 import com.otaliastudios.cameraview.controls.Facing;
-
+import com.otaliastudios.cameraview.controls.Mode;
 
 import java.util.Arrays;
 
 import cn.pedant.SweetAlert.SweetAlertDialog;
 import cz.msebera.android.httpclient.Header;
-import kotlin.Unit;
 
 public class MainActivity extends AppCompatActivity {
 
-    private CameraView cameraKitView;
+    private CameraView camera;
 
     AsyncHttpClient client;
     SweetAlertDialog errorDialog;
@@ -55,15 +49,20 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        cameraKitView = findViewById(R.id.camera);
+        camera = findViewById(R.id.camera);
+        camera.setLifecycleOwner(this);
+
         multiSwitch = findViewById(R.id.multiSwitch);
+
+
+        client = new AsyncHttpClient();
 
 
         multiSwitch.addStatesFromStrings(Arrays.asList("Time In", "Break In/Out", "Time Out"));
         multiSwitch.addStateListener(new StateListener() {
             @Override
             public void onStateSelected(int stateIndex, @NonNull State state) {
-                Toast.makeText(MainActivity.this, stateIndex + " ", Toast.LENGTH_LONG).show();
+                //Toast.makeText(MainActivity.this, stateIndex + " ", Toast.LENGTH_LONG).show();
                 currentState = stateIndex;
             }
         });
@@ -75,13 +74,12 @@ public class MainActivity extends AppCompatActivity {
 
         errorDialog = new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE)
                 .setTitleText("Oops...")
-                .setContentText("Something went wrong!");
+                .setContentText("Something went wrong!")
+                .showCancelButton(true);
 
 
-        client = new AsyncHttpClient();
 
-        CameraView camera = findViewById(R.id.camera);
-        camera.setLifecycleOwner(this);
+
 
 
         Dexter.withActivity(this)
@@ -107,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         camera.setFacing(Facing.FRONT);
+        camera.setMode(Mode.PICTURE);
 
         camera.addCameraListener(new CameraListener() {
 
@@ -129,13 +128,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void makeAttendance(String type) {
+
         SweetAlertDialog loadingDialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE)
                 .setTitleText("Working")
                 .setContentText("Connecting to server. Please wait...");
         RequestParams params = new RequestParams();
         params.put("idno", userID);
         params.put("type", type);
-        client.post(Constants.ATTENDANCE_URL, params, new AsyncHttpResponseHandler() {
+        client.post(Constants.getAttendanceUrl(), params, new AsyncHttpResponseHandler() {
             @Override
             public void onStart() {
                 super.onStart();
@@ -152,10 +152,20 @@ public class MainActivity extends AppCompatActivity {
                 AttendanceResponse attendanceResponse = gson.fromJson(response, AttendanceResponse.class);
 
                 if (attendanceResponse.getError() == null || attendanceResponse.getError().isEmpty()) {
-                    new SweetAlertDialog(MainActivity.this, SweetAlertDialog.SUCCESS_TYPE)
+                    SweetAlertDialog finalConfirmDialog = new SweetAlertDialog(MainActivity.this, SweetAlertDialog.SUCCESS_TYPE)
                             .setTitleText("Yaay!.")
                             .setContentText(attendanceResponse.getSuccess())
-                            .show();
+                            ;
+                    finalConfirmDialog.setCancelable(false);
+                    finalConfirmDialog.setConfirmText(null);
+                    finalConfirmDialog.show();
+                    finalConfirmDialog.getButton(SweetAlertDialog.BUTTON_CONFIRM).setVisibility(View.GONE);
+                    new Handler().postDelayed(new Runnable(){
+                        @Override
+                        public void run() {
+                          finalConfirmDialog.dismissWithAnimation();
+                        }
+                    }, 2000);
 
                 } else {
                     new SweetAlertDialog(MainActivity.this, SweetAlertDialog.ERROR_TYPE)
@@ -184,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
         String imageBase64 = Base64.encodeToString(capturedImage, Base64.DEFAULT);
         RequestParams params = new RequestParams();
         params.add("image_data", imageBase64);
-        client.post(Constants.FETCH_ID_URL, params, new AsyncHttpResponseHandler() {
+        client.post(Constants.getFetchIdUrl(), params, new AsyncHttpResponseHandler() {
             @Override
             public void onStart() {
                 super.onStart();
@@ -260,7 +270,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void takePhoto(View v) {
-        cameraKitView.takePictureSnapshot();
+        camera.takePictureSnapshot();
     }
 
 
